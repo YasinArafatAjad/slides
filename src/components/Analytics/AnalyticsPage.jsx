@@ -239,51 +239,9 @@ const AnalyticsPage = () => {
       </div>
 
       {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 px-8" id="charts-row-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 px-8" id="charts-row-2">
         <PieChart data={deviceData} title="Device Types" loading={loading} />
         <PieChart data={trafficSources} title="Traffic Sources" loading={loading} />
-        
-        {/* Real-time Activity */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6"
-          id="realtime-activity"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-            <div className={`w-3 h-3 rounded-full mr-2 ${isLive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-            Real-time Activity
-          </h3>
-          
-          {loading ? (
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {realtimeData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white text-sm">
-                      {item.page}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {item.time}
-                    </p>
-                  </div>
-                  <span className="px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-medium rounded-full">
-                    {item.visitors}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </motion.div>
       </div>
 
       {/* GA4 Connection Status */}
