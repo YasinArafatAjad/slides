@@ -7,19 +7,34 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+}));
 app.use(express.json());
 
-// Initialize GA4 client
-const analyticsDataClient = new BetaAnalyticsDataClient({
-  projectId: process.env.GOOGLE_PROJECT_ID,
-  credentials: {
-    client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  },
-});
+// Initialize GA4 client with better error handling
+let analyticsDataClient = null;
+let propertyId = null;
 
-const propertyId = process.env.GA4_PROPERTY_ID;
+try {
+  propertyId = process.env.GA4_PROPERTY_ID;
+  
+  if (process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY && process.env.GOOGLE_PROJECT_ID) {
+    analyticsDataClient = new BetaAnalyticsDataClient({
+      projectId: process.env.GOOGLE_PROJECT_ID,
+      credentials: {
+        client_email: process.env.GOOGLE_CLIENT_EMAIL,
+        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      },
+    });
+    console.log('✅ GA4 Analytics client initialized successfully');
+  } else {
+    console.log('⚠️  GA4 credentials not found, using fallback data');
+  }
+} catch (error) {
+  console.error('❌ Error initializing GA4 client:', error.message);
+}
 
 // Helper function to calculate date range
 const getDateRange = (range) => {
@@ -97,56 +112,69 @@ const getFallbackData = {
   })
 };
 
+// Helper function to safely call GA4 API
+const safeGA4Call = async (apiCall, fallbackData) => {
+  if (!analyticsDataClient || !propertyId) {
+    console.log('📊 Using fallback data (GA4 not configured)');
+    return fallbackData;
+  }
+
+  try {
+    const result = await apiCall();
+    console.log('✅ GA4 API call successful');
+    return result;
+  } catch (error) {
+    console.error('❌ GA4 API call failed:', error.message);
+    return fallbackData;
+  }
+};
+
 // API Routes
 
 // Real-time data
 app.get('/api/analytics/realtime', async (req, res) => {
   try {
-    if (!propertyId) {
-      return res.json(getFallbackData.realtime());
-    }
+    const data = await safeGA4Call(async () => {
+      const [response] = await analyticsDataClient.runRealtimeReport({
+        property: `properties/${propertyId}`,
+        dimensions: [{ name: 'pagePath' }],
+        metrics: [{ name: 'activeUsers' }],
+      });
 
-    const [response] = await analyticsDataClient.runRealtimeReport({
-      property: `properties/${propertyId}`,
-      dimensions: [{ name: 'pagePath' }],
-      metrics: [{ name: 'activeUsers' }],
-    });
-
-    const data = response.rows?.map(row => ({
-      page: row.dimensionValues[0].value,
-      visitors: parseInt(row.metricValues[0].value),
-      time: 'Live'
-    })) || getFallbackData.realtime();
+      return response.rows?.map(row => ({
+        page: row.dimensionValues[0].value,
+        visitors: parseInt(row.metricValues[0].value),
+        time: 'Live'
+      })) || getFallbackData.realtime();
+    }, getFallbackData.realtime());
 
     res.json(data);
   } catch (error) {
     console.error('Realtime API Error:', error);
     res.json(getFallbackData.realtime());
   }
-}); 
+});
 
 // Visitor trends
 app.get('/api/analytics/visitors', async (req, res) => {
   try {
     const dateRange = req.query.range || '7d';
     
-    if (!propertyId) {
-      return res.json(getFallbackData.visitors());
-    }
+    const data = await safeGA4Call(async () => {
+      const { startDate, endDate } = getDateRange(dateRange);
 
-    const { startDate, endDate } = getDateRange(dateRange);
+      const [response] = await analyticsDataClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'date' }],
+        metrics: [{ name: 'activeUsers' }],
+      });
 
-    const [response] = await analyticsDataClient.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [{ startDate, endDate }],
-      dimensions: [{ name: 'date' }],
-      metrics: [{ name: 'activeUsers' }],
-    });
-
-    const data = response.rows?.map(row => ({
-      name: new Date(row.dimensionValues[0].value).toLocaleDateString('en-US', { weekday: 'short' }),
-      value: parseInt(row.metricValues[0].value)
-    })) || getFallbackData.visitors();
+      return response.rows?.map(row => ({
+        name: new Date(row.dimensionValues[0].value).toLocaleDateString('en-US', { weekday: 'short' }),
+        value: parseInt(row.metricValues[0].value)
+      })) || getFallbackData.visitors();
+    }, getFallbackData.visitors());
 
     res.json(data);
   } catch (error) {
@@ -160,25 +188,23 @@ app.get('/api/analytics/pageviews', async (req, res) => {
   try {
     const dateRange = req.query.range || '7d';
     
-    if (!propertyId) {
-      return res.json(getFallbackData.pageviews());
-    }
+    const data = await safeGA4Call(async () => {
+      const { startDate, endDate } = getDateRange(dateRange);
 
-    const { startDate, endDate } = getDateRange(dateRange);
+      const [response] = await analyticsDataClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'pagePath' }],
+        metrics: [{ name: 'screenPageViews' }],
+        orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
+        limit: 6
+      });
 
-    const [response] = await analyticsDataClient.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [{ startDate, endDate }],
-      dimensions: [{ name: 'pagePath' }],
-      metrics: [{ name: 'screenPageViews' }],
-      orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
-      limit: 6
-    });
-
-    const data = response.rows?.map(row => ({
-      name: row.dimensionValues[0].value.replace('/', '') || 'Home',
-      value: parseInt(row.metricValues[0].value)
-    })) || getFallbackData.pageviews();
+      return response.rows?.map(row => ({
+        name: row.dimensionValues[0].value.replace('/', '') || 'Home',
+        value: parseInt(row.metricValues[0].value)
+      })) || getFallbackData.pageviews();
+    }, getFallbackData.pageviews());
 
     res.json(data);
   } catch (error) {
@@ -192,23 +218,21 @@ app.get('/api/analytics/devices', async (req, res) => {
   try {
     const dateRange = req.query.range || '7d';
     
-    if (!propertyId) {
-      return res.json(getFallbackData.devices());
-    }
+    const data = await safeGA4Call(async () => {
+      const { startDate, endDate } = getDateRange(dateRange);
 
-    const { startDate, endDate } = getDateRange(dateRange);
+      const [response] = await analyticsDataClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'deviceCategory' }],
+        metrics: [{ name: 'activeUsers' }],
+      });
 
-    const [response] = await analyticsDataClient.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [{ startDate, endDate }],
-      dimensions: [{ name: 'deviceCategory' }],
-      metrics: [{ name: 'activeUsers' }],
-    });
-
-    const data = response.rows?.map(row => ({
-      name: row.dimensionValues[0].value,
-      value: parseInt(row.metricValues[0].value)
-    })) || getFallbackData.devices();
+      return response.rows?.map(row => ({
+        name: row.dimensionValues[0].value,
+        value: parseInt(row.metricValues[0].value)
+      })) || getFallbackData.devices();
+    }, getFallbackData.devices());
 
     res.json(data);
   } catch (error) {
@@ -222,26 +246,24 @@ app.get('/api/analytics/traffic-sources', async (req, res) => {
   try {
     const dateRange = req.query.range || '7d';
     
-    if (!propertyId) {
-      return res.json(getFallbackData.trafficSources());
-    }
+    const data = await safeGA4Call(async () => {
+      const { startDate, endDate } = getDateRange(dateRange);
 
-    const { startDate, endDate } = getDateRange(dateRange);
+      const [response] = await analyticsDataClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'sessionDefaultChannelGroup' }],
+        metrics: [{ name: 'sessions' }],
+      });
 
-    const [response] = await analyticsDataClient.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [{ startDate, endDate }],
-      dimensions: [{ name: 'sessionDefaultChannelGroup' }],
-      metrics: [{ name: 'sessions' }],
-    });
+      const totalSessions = response.rows?.reduce((sum, row) => 
+        sum + parseInt(row.metricValues[0].value), 0) || 1;
 
-    const totalSessions = response.rows?.reduce((sum, row) => 
-      sum + parseInt(row.metricValues[0].value), 0) || 1;
-
-    const data = response.rows?.map(row => ({
-      name: row.dimensionValues[0].value,
-      value: Math.round((parseInt(row.metricValues[0].value) / totalSessions) * 100)
-    })) || getFallbackData.trafficSources();
+      return response.rows?.map(row => ({
+        name: row.dimensionValues[0].value,
+        value: Math.round((parseInt(row.metricValues[0].value) / totalSessions) * 100)
+      })) || getFallbackData.trafficSources();
+    }, getFallbackData.trafficSources());
 
     res.json(data);
   } catch (error) {
@@ -255,37 +277,35 @@ app.get('/api/analytics/metrics', async (req, res) => {
   try {
     const dateRange = req.query.range || '7d';
     
-    if (!propertyId) {
-      return res.json(getFallbackData.metrics());
-    }
+    const data = await safeGA4Call(async () => {
+      const { startDate, endDate } = getDateRange(dateRange);
 
-    const { startDate, endDate } = getDateRange(dateRange);
+      const [response] = await analyticsDataClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate, endDate }],
+        metrics: [
+          { name: 'activeUsers' },
+          { name: 'screenPageViews' },
+          { name: 'averageSessionDuration' },
+          { name: 'bounceRate' }
+        ],
+      });
 
-    const [response] = await analyticsDataClient.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [{ startDate, endDate }],
-      metrics: [
-        { name: 'activeUsers' },
-        { name: 'screenPageViews' },
-        { name: 'averageSessionDuration' },
-        { name: 'bounceRate' }
-      ],
-    });
-
-    const metrics = response.rows?.[0]?.metricValues || [];
-    
-    const data = {
-      totalVisitors: parseInt(metrics[0]?.value || '0').toLocaleString(),
-      pageViews: parseInt(metrics[1]?.value || '0').toLocaleString(),
-      avgSessionDuration: `${Math.floor(parseFloat(metrics[2]?.value || '0') / 60)}m ${Math.floor(parseFloat(metrics[2]?.value || '0') % 60)}s`,
-      bounceRate: `${(parseFloat(metrics[3]?.value || '0') * 100).toFixed(1)}%`,
-      changes: {
-        visitors: '+12.5%',
-        pageViews: '+8.3%',
-        duration: '+15.2%',
-        bounceRate: '-3.1%'
-      }
-    };
+      const metrics = response.rows?.[0]?.metricValues || [];
+      
+      return {
+        totalVisitors: parseInt(metrics[0]?.value || '0').toLocaleString(),
+        pageViews: parseInt(metrics[1]?.value || '0').toLocaleString(),
+        avgSessionDuration: `${Math.floor(parseFloat(metrics[2]?.value || '0') / 60)}m ${Math.floor(parseFloat(metrics[2]?.value || '0') % 60)}s`,
+        bounceRate: `${(parseFloat(metrics[3]?.value || '0') * 100).toFixed(1)}%`,
+        changes: {
+          visitors: '+12.5%',
+          pageViews: '+8.3%',
+          duration: '+15.2%',
+          bounceRate: '-3.1%'
+        }
+      };
+    }, getFallbackData.metrics());
 
     res.json(data);
   } catch (error) {
@@ -296,14 +316,38 @@ app.get('/api/analytics/metrics', async (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
+  const isGA4Configured = !!(analyticsDataClient && propertyId);
+  
   res.json({ 
     status: 'OK', 
-    ga4Connected: !!propertyId,
-    timestamp: new Date().toISOString()
+    ga4Connected: isGA4Configured,
+    timestamp: new Date().toISOString(),
+    environment: {
+      nodeEnv: process.env.NODE_ENV || 'development',
+      port: PORT,
+      hasGA4PropertyId: !!process.env.GA4_PROPERTY_ID,
+      hasGoogleCredentials: !!(process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY),
+    }
   });
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server Error:', err);
+  res.status(500).json({ 
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Endpoint not found' });
+});
+
 app.listen(PORT, () => {
-  console.log(`Analytics server running on port ${PORT}`);
-  console.log(`GA4 Property ID: ${propertyId ? 'Configured' : 'Not configured'}`);
+  console.log(`🚀 Analytics server running on port ${PORT}`);
+  console.log(`📊 GA4 Property ID: ${propertyId ? 'Configured' : 'Not configured'}`);
+  console.log(`🔑 GA4 Credentials: ${analyticsDataClient ? 'Loaded' : 'Missing'}`);
+  console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
 });
