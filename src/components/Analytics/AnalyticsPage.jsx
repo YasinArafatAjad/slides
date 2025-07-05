@@ -27,11 +27,9 @@ import PieChart from './charts/PieChart';
 import SetupGuide from './SetupGuide';
 import DebugPanel from './DebugPanel';
 import useAnalytics from '../../hooks/useAnalytics';
-import { exportToPDF } from '../../utils/pdfExport';
 
 const AnalyticsPage = () => {
   const [dateRange, setDateRange] = useState('7d');
-  const [isExporting, setIsExporting] = useState(false);
   const [showSetupGuide, setShowSetupGuide] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const {
@@ -67,28 +65,9 @@ const AnalyticsPage = () => {
     return date.toLocaleDateString();
   };
 
-  const exportToPDFHandler = async () => {
-    setIsExporting(true);
-    try {
-      const data = {
-        keyMetrics,
-        visitorTrends,
-        pageViews,
-        deviceData,
-        trafficSources,
-        realtimeData,
-        dateRange: dateRanges.find(r => r.value === dateRange)?.label,
-        lastUpdated,
-        isLive
-      };
-      
-      await exportToPDF(data, `analytics-report-${dateRange}-${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error('PDF export failed:', error);
-      alert('Failed to export PDF. Please try again.');
-    } finally {
-      setIsExporting(false);
-    }
+  const handleExportClick = () => {
+    // Just show an alert for now - no actual PDF generation
+    alert('Export functionality coming soon!');
   };
 
   if (loading && !keyMetrics) {
@@ -162,13 +141,12 @@ const AnalyticsPage = () => {
           </motion.button>
 
           <motion.button
-            onClick={exportToPDFHandler}
-            disabled={isExporting}
+            onClick={handleExportClick}
             whileTap={{ scale: 0.95 }}
-            className="flex items-center space-x-2 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white rounded-lg transition-colors duration-200"
+            className="flex items-center space-x-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200"
           >
-            <Download className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
-            <span>{isExporting ? 'Exporting...' : 'Export PDF'}</span>
+            <Download className="w-4 h-4" />
+            <span>Export PDF</span>
           </motion.button>
         </div>
       </div>
