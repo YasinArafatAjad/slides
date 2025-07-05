@@ -17,13 +17,15 @@ import {
   Wifi,
   WifiOff,
   Settings,
-  HelpCircle
+  HelpCircle,
+  Bug
 } from 'lucide-react';
 import StatsCard from './StatsCard';
 import LineChart from './charts/LineChart';
 import BarChart from './charts/BarChart';
 import PieChart from './charts/PieChart';
 import SetupGuide from './SetupGuide';
+import DebugPanel from './DebugPanel';
 import useAnalytics from '../../hooks/useAnalytics';
 import { exportToPDF } from '../../utils/pdfExport';
 
@@ -31,6 +33,7 @@ const AnalyticsPage = () => {
   const [dateRange, setDateRange] = useState('7d');
   const [isExporting, setIsExporting] = useState(false);
   const [showSetupGuide, setShowSetupGuide] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
   const {
     keyMetrics,
     visitorTrends,
@@ -140,6 +143,15 @@ const AnalyticsPage = () => {
         
         <div className="flex items-center space-x-2">
           <motion.button
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center space-x-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors duration-200"
+          >
+            <Bug className="w-4 h-4" />
+            <span>Debug</span>
+          </motion.button>
+
+          <motion.button
             onClick={refreshData}
             disabled={loading}
             whileTap={{ scale: 0.95 }}
@@ -160,6 +172,13 @@ const AnalyticsPage = () => {
           </motion.button>
         </div>
       </div>
+
+      {/* Debug Panel */}
+      {showDebugPanel && (
+        <div className="px-8 mb-8">
+          <DebugPanel />
+        </div>
+      )}
 
       {/* Error Banner */}
       {error && (
@@ -324,7 +343,7 @@ const AnalyticsPage = () => {
                 className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
               >
                 <Settings className="w-4 h-4" />
-                <span>How to Google Analytics</span>
+                <span>Setup Google Analytics</span>
               </button>
             </div>
           )}
