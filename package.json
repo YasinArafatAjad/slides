@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run server\" \"vite\"",
+    "full": "concurrently \"npm run server\" \"vite\"",
+    "dev": "vite",
     "server": "node server/index.cjs",
     "build": "vite build",
     "lint": "eslint .",
