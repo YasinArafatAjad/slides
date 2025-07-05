@@ -100,30 +100,30 @@ const getFallbackData = {
 // API Routes
 
 // Real-time data
-app.get('/api/analytics/realtime', async (req, res) => {
-  try {
-    if (!propertyId) {
-      return res.json(getFallbackData.realtime());
-    }
+// app.get('/api/analytics/realtime', async (req, res) => {
+//   try {
+//     if (!propertyId) {
+//       return res.json(getFallbackData.realtime());
+//     }
 
-    const [response] = await analyticsDataClient.runRealtimeReport({
-      property: `properties/${propertyId}`,
-      dimensions: [{ name: 'pagePath' }],
-      metrics: [{ name: 'activeUsers' }],
-    });
+//     const [response] = await analyticsDataClient.runRealtimeReport({
+//       property: `properties/${propertyId}`,
+//       dimensions: [{ name: 'pagePath' }],
+//       metrics: [{ name: 'activeUsers' }],
+//     });
 
-    const data = response.rows?.map(row => ({
-      page: row.dimensionValues[0].value,
-      visitors: parseInt(row.metricValues[0].value),
-      time: 'Live'
-    })) || getFallbackData.realtime();
+//     const data = response.rows?.map(row => ({
+//       page: row.dimensionValues[0].value,
+//       visitors: parseInt(row.metricValues[0].value),
+//       time: 'Live'
+//     })) || getFallbackData.realtime();
 
-    res.json(data);
-  } catch (error) {
-    console.error('Realtime API Error:', error);
-    res.json(getFallbackData.realtime());
-  }
-});
+//     res.json(data);
+//   } catch (error) {
+//     console.error('Realtime API Error:', error);
+//     res.json(getFallbackData.realtime());
+//   }
+// });
 
 // Visitor trends
 app.get('/api/analytics/visitors', async (req, res) => {
