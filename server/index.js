@@ -18,7 +18,8 @@ app.use(cors({
     'http://127.0.0.1:5173',
     'http://127.0.0.1:3000',
     'https://slides-ya0x.onrender.com',
-    'https://*.onrender.com'
+    'https://*.onrender.com',
+    'https://slides-alpha-three.vercel.app'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
