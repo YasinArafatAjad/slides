@@ -8,6 +8,7 @@ export const useAnalytics = (dateRange = '7d') => {
     pageViews: [],
     deviceData: [],
     trafficSources: [],
+    detailedTrafficSources: [],
     realtimeData: [],
     loading: true,
     error: null,
@@ -30,6 +31,7 @@ export const useAnalytics = (dateRange = '7d') => {
         pageViews,
         deviceData,
         trafficSources,
+        detailedTrafficSources,
         realtimeData
       ] = await Promise.all([
         ga4Service.getKeyMetrics(dateRange),
@@ -37,6 +39,7 @@ export const useAnalytics = (dateRange = '7d') => {
         ga4Service.getPageViews(dateRange),
         ga4Service.getDeviceData(dateRange),
         ga4Service.getTrafficSources(dateRange),
+        ga4Service.getDetailedTrafficSources(dateRange),
         ga4Service.getRealtimeData()
       ]);
 
@@ -46,6 +49,7 @@ export const useAnalytics = (dateRange = '7d') => {
         pageViews,
         deviceData,
         trafficSources,
+        detailedTrafficSources,
         realtimeData,
         loading: false,
         error: health.status === 'ERROR' ? `Server: ${health.error}` : null,

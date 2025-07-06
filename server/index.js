@@ -207,11 +207,29 @@ const getFallbackData = {
   ],
   
   trafficSources: () => [
-    { name: 'Organic Search', value: Math.floor(Math.random() * 15) + 35 },
-    { name: 'Direct', value: Math.floor(Math.random() * 10) + 25 },
-    { name: 'Social Media', value: Math.floor(Math.random() * 12) + 18 },
-    { name: 'Referral', value: Math.floor(Math.random() * 8) + 7 },
-    { name: 'Email', value: Math.floor(Math.random() * 6) + 4 },
+    { name: 'Google Search', value: Math.floor(Math.random() * 15) + 35, category: 'Organic Search', icon: '🔍' },
+    { name: 'Facebook', value: Math.floor(Math.random() * 8) + 12, category: 'Social Media', icon: '📘' },
+    { name: 'Direct Traffic', value: Math.floor(Math.random() * 10) + 20, category: 'Direct', icon: '🔗' },
+    { name: 'Instagram', value: Math.floor(Math.random() * 6) + 8, category: 'Social Media', icon: '📷' },
+    { name: 'TikTok', value: Math.floor(Math.random() * 5) + 6, category: 'Social Media', icon: '🎵' },
+    { name: 'YouTube', value: Math.floor(Math.random() * 4) + 5, category: 'Social Media', icon: '📺' },
+    { name: 'Twitter/X', value: Math.floor(Math.random() * 3) + 4, category: 'Social Media', icon: '🐦' },
+    { name: 'LinkedIn', value: Math.floor(Math.random() * 3) + 3, category: 'Social Media', icon: '💼' },
+    { name: 'Email Campaign', value: Math.floor(Math.random() * 4) + 3, category: 'Email', icon: '📧' },
+    { name: 'Referral Sites', value: Math.floor(Math.random() * 5) + 4, category: 'Referral', icon: '🔄' }
+  ],
+  
+  detailedTrafficSources: () => [
+    { source: 'google', medium: 'organic', campaign: '(not set)', sessions: Math.floor(Math.random() * 500) + 800, users: Math.floor(Math.random() * 400) + 600 },
+    { source: 'facebook.com', medium: 'referral', campaign: '(not set)', sessions: Math.floor(Math.random() * 200) + 300, users: Math.floor(Math.random() * 180) + 250 },
+    { source: 'instagram.com', medium: 'referral', campaign: '(not set)', sessions: Math.floor(Math.random() * 150) + 200, users: Math.floor(Math.random() * 120) + 180 },
+    { source: 'tiktok.com', medium: 'referral', campaign: '(not set)', sessions: Math.floor(Math.random() * 100) + 150, users: Math.floor(Math.random() * 80) + 120 },
+    { source: 'youtube.com', medium: 'referral', campaign: '(not set)', sessions: Math.floor(Math.random() * 80) + 120, users: Math.floor(Math.random() * 70) + 100 },
+    { source: 'twitter.com', medium: 'referral', campaign: '(not set)', sessions: Math.floor(Math.random() * 60) + 80, users: Math.floor(Math.random() * 50) + 70 },
+    { source: 'linkedin.com', medium: 'referral', campaign: '(not set)', sessions: Math.floor(Math.random() * 50) + 70, users: Math.floor(Math.random() * 40) + 60 },
+    { source: '(direct)', medium: '(none)', campaign: '(not set)', sessions: Math.floor(Math.random() * 300) + 400, users: Math.floor(Math.random() * 250) + 350 },
+    { source: 'newsletter', medium: 'email', campaign: 'weekly_digest', sessions: Math.floor(Math.random() * 40) + 60, users: Math.floor(Math.random() * 35) + 50 },
+    { source: 'reddit.com', medium: 'referral', campaign: '(not set)', sessions: Math.floor(Math.random() * 30) + 40, users: Math.floor(Math.random() * 25) + 35 }
   ],
   
   metrics: () => ({
@@ -274,6 +292,7 @@ app.get('/', (req, res) => {
       'GET /api/analytics/pageviews',
       'GET /api/analytics/devices',
       'GET /api/analytics/traffic-sources',
+      'GET /api/analytics/traffic-sources/detailed',
       'GET /api/analytics/metrics'
     ]
   });
@@ -432,7 +451,7 @@ app.get('/api/analytics/devices', async (req, res) => {
   }
 });
 
-// Traffic sources endpoint
+// Enhanced Traffic sources endpoint with detailed breakdown
 app.get('/api/analytics/traffic-sources', async (req, res) => {
   try {
     const dateRange = req.query.range || '7d';
@@ -445,21 +464,151 @@ app.get('/api/analytics/traffic-sources', async (req, res) => {
         dateRanges: [{ startDate, endDate }],
         dimensions: [{ name: 'sessionDefaultChannelGroup' }],
         metrics: [{ name: 'sessions' }],
+        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }]
       });
 
       const totalSessions = response.rows?.reduce((sum, row) => 
         sum + parseInt(row.metricValues[0].value), 0) || 1;
 
-      return response.rows?.map(row => ({
-        name: row.dimensionValues[0].value,
-        value: Math.round((parseInt(row.metricValues[0].value) / totalSessions) * 100)
-      })) || getFallbackData.trafficSources();
+      // Map GA4 channel groups to more specific sources with icons
+      const channelMapping = {
+        'Organic Search': { name: 'Google Search', icon: '🔍', category: 'Search' },
+        'Direct': { name: 'Direct Traffic', icon: '🔗', category: 'Direct' },
+        'Social': { name: 'Social Media', icon: '📱', category: 'Social' },
+        'Referral': { name: 'Referral Sites', icon: '🔄', category: 'Referral' },
+        'Email': { name: 'Email Campaign', icon: '📧', category: 'Email' },
+        'Paid Search': { name: 'Google Ads', icon: '💰', category: 'Paid' },
+        'Display': { name: 'Display Ads', icon: '🖼️', category: 'Paid' },
+        'Video': { name: 'YouTube', icon: '📺', category: 'Video' },
+        'Affiliates': { name: 'Affiliate Links', icon: '🤝', category: 'Affiliate' },
+        'Audio': { name: 'Podcast/Audio', icon: '🎧', category: 'Audio' }
+      };
+
+      return response.rows?.map(row => {
+        const channelGroup = row.dimensionValues[0].value;
+        const sessions = parseInt(row.metricValues[0].value);
+        const percentage = Math.round((sessions / totalSessions) * 100);
+        const mapping = channelMapping[channelGroup] || { 
+          name: channelGroup, 
+          icon: '🌐', 
+          category: 'Other' 
+        };
+
+        return {
+          name: mapping.name,
+          value: percentage,
+          sessions: sessions,
+          category: mapping.category,
+          icon: mapping.icon,
+          originalChannel: channelGroup
+        };
+      }) || getFallbackData.trafficSources();
     }, getFallbackData.trafficSources(), 'traffic-sources');
 
     res.json(data);
   } catch (error) {
     console.error('Traffic sources endpoint error:', error);
     res.json(getFallbackData.trafficSources());
+  }
+});
+
+// NEW: Detailed traffic sources endpoint with source/medium breakdown
+app.get('/api/analytics/traffic-sources/detailed', async (req, res) => {
+  try {
+    const dateRange = req.query.range || '7d';
+    
+    const data = await safeGA4Call(async () => {
+      const { startDate, endDate } = getDateRange(dateRange);
+
+      const [response] = await analyticsDataClient.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [
+          { name: 'sessionSource' },
+          { name: 'sessionMedium' },
+          { name: 'sessionCampaignName' }
+        ],
+        metrics: [
+          { name: 'sessions' },
+          { name: 'activeUsers' }
+        ],
+        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+        limit: 20
+      });
+
+      // Process and categorize the detailed sources
+      return response.rows?.map(row => {
+        const source = row.dimensionValues[0].value;
+        const medium = row.dimensionValues[1].value;
+        const campaign = row.dimensionValues[2].value;
+        const sessions = parseInt(row.metricValues[0].value);
+        const users = parseInt(row.metricValues[1].value);
+
+        // Determine platform and add icons
+        let platform = source;
+        let icon = '🌐';
+        let category = 'Other';
+
+        if (source.includes('google')) {
+          platform = 'Google';
+          icon = '🔍';
+          category = medium === 'organic' ? 'Organic Search' : 'Paid Search';
+        } else if (source.includes('facebook')) {
+          platform = 'Facebook';
+          icon = '📘';
+          category = 'Social Media';
+        } else if (source.includes('instagram')) {
+          platform = 'Instagram';
+          icon = '📷';
+          category = 'Social Media';
+        } else if (source.includes('tiktok')) {
+          platform = 'TikTok';
+          icon = '🎵';
+          category = 'Social Media';
+        } else if (source.includes('youtube')) {
+          platform = 'YouTube';
+          icon = '📺';
+          category = 'Video';
+        } else if (source.includes('twitter') || source.includes('x.com')) {
+          platform = 'Twitter/X';
+          icon = '🐦';
+          category = 'Social Media';
+        } else if (source.includes('linkedin')) {
+          platform = 'LinkedIn';
+          icon = '💼';
+          category = 'Social Media';
+        } else if (source.includes('reddit')) {
+          platform = 'Reddit';
+          icon = '🔴';
+          category = 'Social Media';
+        } else if (source === '(direct)') {
+          platform = 'Direct Traffic';
+          icon = '🔗';
+          category = 'Direct';
+        } else if (medium === 'email') {
+          platform = 'Email';
+          icon = '📧';
+          category = 'Email Marketing';
+        }
+
+        return {
+          source,
+          medium,
+          campaign,
+          platform,
+          sessions,
+          users,
+          icon,
+          category,
+          displayName: `${platform} (${medium})`
+        };
+      }) || getFallbackData.detailedTrafficSources();
+    }, getFallbackData.detailedTrafficSources(), 'detailed-traffic-sources');
+
+    res.json(data);
+  } catch (error) {
+    console.error('Detailed traffic sources endpoint error:', error);
+    res.json(getFallbackData.detailedTrafficSources());
   }
 });
 
@@ -530,6 +679,7 @@ app.use((req, res) => {
       'GET /api/analytics/pageviews',
       'GET /api/analytics/devices',
       'GET /api/analytics/traffic-sources',
+      'GET /api/analytics/traffic-sources/detailed',
       'GET /api/analytics/metrics'
     ]
   });
