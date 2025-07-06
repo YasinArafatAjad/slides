@@ -63,6 +63,18 @@ class GA4Service {
     }
   }
 
+  // Get detailed traffic sources with source/medium breakdown
+  async getDetailedTrafficSources(dateRange = '7d') {
+    try {
+      const response = await fetch(`${this.baseUrl}/traffic-sources/detailed?range=${dateRange}`);
+      if (!response.ok) throw new Error('Failed to fetch detailed traffic sources');
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching detailed traffic sources:', error);
+      return this.getFallbackDetailedTrafficSourcesData();
+    }
+  }
+
   // Get key metrics
   async getKeyMetrics(dateRange = '7d') {
     try {
@@ -124,11 +136,131 @@ class GA4Service {
 
   getFallbackTrafficSourcesData() {
     return [
-      { name: 'Organic Search', value: Math.floor(Math.random() * 20) + 30 },
-      { name: 'Direct', value: Math.floor(Math.random() * 15) + 20 },
-      { name: 'Social Media', value: Math.floor(Math.random() * 15) + 15 },
-      { name: 'Referral', value: Math.floor(Math.random() * 10) + 5 },
-      { name: 'Email', value: Math.floor(Math.random() * 8) + 2 },
+      { name: 'Google Search', value: Math.floor(Math.random() * 15) + 35, category: 'Organic Search', icon: '🔍' },
+      { name: 'Facebook', value: Math.floor(Math.random() * 8) + 12, category: 'Social Media', icon: '📘' },
+      { name: 'Direct Traffic', value: Math.floor(Math.random() * 10) + 20, category: 'Direct', icon: '🔗' },
+      { name: 'Instagram', value: Math.floor(Math.random() * 6) + 8, category: 'Social Media', icon: '📷' },
+      { name: 'TikTok', value: Math.floor(Math.random() * 5) + 6, category: 'Social Media', icon: '🎵' },
+      { name: 'YouTube', value: Math.floor(Math.random() * 4) + 5, category: 'Social Media', icon: '📺' },
+      { name: 'Twitter/X', value: Math.floor(Math.random() * 3) + 4, category: 'Social Media', icon: '🐦' },
+      { name: 'LinkedIn', value: Math.floor(Math.random() * 3) + 3, category: 'Social Media', icon: '💼' },
+      { name: 'Email Campaign', value: Math.floor(Math.random() * 4) + 3, category: 'Email', icon: '📧' },
+      { name: 'Referral Sites', value: Math.floor(Math.random() * 5) + 4, category: 'Referral', icon: '🔄' }
+    ];
+  }
+
+  getFallbackDetailedTrafficSourcesData() {
+    return [
+      { 
+        source: 'google', 
+        medium: 'organic', 
+        campaign: '(not set)', 
+        platform: 'Google',
+        sessions: Math.floor(Math.random() * 500) + 800, 
+        users: Math.floor(Math.random() * 400) + 600,
+        icon: '🔍',
+        category: 'Organic Search',
+        displayName: 'Google (organic)'
+      },
+      { 
+        source: 'facebook.com', 
+        medium: 'referral', 
+        campaign: '(not set)', 
+        platform: 'Facebook',
+        sessions: Math.floor(Math.random() * 200) + 300, 
+        users: Math.floor(Math.random() * 180) + 250,
+        icon: '📘',
+        category: 'Social Media',
+        displayName: 'Facebook (referral)'
+      },
+      { 
+        source: 'instagram.com', 
+        medium: 'referral', 
+        campaign: '(not set)', 
+        platform: 'Instagram',
+        sessions: Math.floor(Math.random() * 150) + 200, 
+        users: Math.floor(Math.random() * 120) + 180,
+        icon: '📷',
+        category: 'Social Media',
+        displayName: 'Instagram (referral)'
+      },
+      { 
+        source: 'tiktok.com', 
+        medium: 'referral', 
+        campaign: '(not set)', 
+        platform: 'TikTok',
+        sessions: Math.floor(Math.random() * 100) + 150, 
+        users: Math.floor(Math.random() * 80) + 120,
+        icon: '🎵',
+        category: 'Social Media',
+        displayName: 'TikTok (referral)'
+      },
+      { 
+        source: 'youtube.com', 
+        medium: 'referral', 
+        campaign: '(not set)', 
+        platform: 'YouTube',
+        sessions: Math.floor(Math.random() * 80) + 120, 
+        users: Math.floor(Math.random() * 70) + 100,
+        icon: '📺',
+        category: 'Video',
+        displayName: 'YouTube (referral)'
+      },
+      { 
+        source: 'twitter.com', 
+        medium: 'referral', 
+        campaign: '(not set)', 
+        platform: 'Twitter/X',
+        sessions: Math.floor(Math.random() * 60) + 80, 
+        users: Math.floor(Math.random() * 50) + 70,
+        icon: '🐦',
+        category: 'Social Media',
+        displayName: 'Twitter/X (referral)'
+      },
+      { 
+        source: 'linkedin.com', 
+        medium: 'referral', 
+        campaign: '(not set)', 
+        platform: 'LinkedIn',
+        sessions: Math.floor(Math.random() * 50) + 70, 
+        users: Math.floor(Math.random() * 40) + 60,
+        icon: '💼',
+        category: 'Social Media',
+        displayName: 'LinkedIn (referral)'
+      },
+      { 
+        source: '(direct)', 
+        medium: '(none)', 
+        campaign: '(not set)', 
+        platform: 'Direct Traffic',
+        sessions: Math.floor(Math.random() * 300) + 400, 
+        users: Math.floor(Math.random() * 250) + 350,
+        icon: '🔗',
+        category: 'Direct',
+        displayName: 'Direct Traffic (none)'
+      },
+      { 
+        source: 'newsletter', 
+        medium: 'email', 
+        campaign: 'weekly_digest', 
+        platform: 'Email',
+        sessions: Math.floor(Math.random() * 40) + 60, 
+        users: Math.floor(Math.random() * 35) + 50,
+        icon: '📧',
+        category: 'Email Marketing',
+        displayName: 'Email (email)'
+      },
+      { 
+        source: 'reddit.com', 
+        medium: 'referral', 
+        campaign: '(not set)', 
+        platform: 'Reddit',
+        sessions: Math.floor(Math.random() * 30) + 40, 
+        users: Math.floor(Math.random() * 25) + 35,
+        icon: '🔴',
+        category: 'Social Media',
+        displayName: 'Reddit (referral)'
+      }
     ];
   }
 

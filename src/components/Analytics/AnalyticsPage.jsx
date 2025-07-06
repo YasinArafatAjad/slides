@@ -18,12 +18,14 @@ import {
   WifiOff,
   Settings,
   HelpCircle,
-  Bug
+  Bug,
+  ExternalLink
 } from 'lucide-react';
 import StatsCard from './StatsCard';
 import LineChart from './charts/LineChart';
 import BarChart from './charts/BarChart';
 import PieChart from './charts/PieChart';
+import DetailedTrafficChart from './charts/DetailedTrafficChart';
 import SetupGuide from './SetupGuide';
 import DebugPanel from './DebugPanel';
 import DataStatusChecker from './DataStatusChecker';
@@ -39,6 +41,7 @@ const AnalyticsPage = () => {
     pageViews,
     deviceData,
     trafficSources,
+    detailedTrafficSources,
     realtimeData,
     loading,
     error,
@@ -225,7 +228,62 @@ const AnalyticsPage = () => {
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 px-8" id="charts-row-2">
         <PieChart data={deviceData} title="Device Types" loading={loading} />
-        <PieChart data={trafficSources} title="Traffic Sources" loading={loading} />
+        <PieChart data={trafficSources} title="Traffic Sources Overview" loading={loading} />
+      </div>
+
+      {/* Enhanced Traffic Sources Section */}
+      <div className="px-8 mb-8" id="detailed-traffic-sources">
+        <DetailedTrafficChart 
+          data={detailedTrafficSources || []} 
+          title="Detailed Traffic Sources - Where Your Users Come From" 
+          loading={loading} 
+        />
+      </div>
+
+      {/* Real-time Activity */}
+      <div className="px-8 mb-8" id="realtime-activity">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse mr-3"></div>
+              Real-time Activity
+            </h3>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Live users on your site
+            </span>
+          </div>
+          
+          <div className="space-y-3">
+            {realtimeData?.slice(0, 5).map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-gray-900 dark:text-white font-medium">
+                    {item.page}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">
+                    {item.visitors} users
+                  </span>
+                  <span className="text-gray-500 dark:text-gray-500 text-xs">
+                    {item.time}
+                  </span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </div>
 
       {/* GA4 Connection Status */}
