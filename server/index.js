@@ -16,10 +16,12 @@ app.use(cors({
     'http://localhost:3000',
     'http://localhost:4173',
     'http://127.0.0.1:5173',
-    'http://127.0.0.1:3000'
+    'http://127.0.0.1:3000',
+    'https://slides-ya0x.onrender.com',
+    'https://*.onrender.com'
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -244,7 +246,28 @@ const safeGA4Call = async (apiCall, fallbackData, endpoint = 'unknown') => {
   }
 };
 
-// API Routes with enhanced error handling
+// Root route handler
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Analytics Server is running!',
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    endpoints: [
+      'GET /api/health',
+      'GET /api/analytics/realtime',
+      'GET /api/analytics/visitors',
+      'GET /api/analytics/pageviews',
+      'GET /api/analytics/devices',
+      'GET /api/analytics/traffic-sources',
+      'GET /api/analytics/metrics'
+    ]
+  });
+});
+
+// Handle HEAD requests to root
+app.head('/', (req, res) => {
+  res.status(200).end();
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -485,6 +508,7 @@ app.use((req, res) => {
     path: req.path,
     method: req.method,
     availableEndpoints: [
+      'GET /',
       'GET /api/health',
       'GET /api/analytics/realtime',
       'GET /api/analytics/visitors',
