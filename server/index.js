@@ -129,6 +129,10 @@ const initializeGA4Client = async () => {
       console.error('💡 Solution: Check service account credentials format');
     } else if (error.message.includes('API_KEY_INVALID')) {
       console.error('💡 Solution: Enable Google Analytics Data API in Google Cloud Console');
+    } else if (error.message.includes('RESOURCE_EXHAUSTED')) {
+      console.error('💡 Solution: GA4 API quota exceeded, wait and try again');
+    } else if (error.message.includes('NOT_FOUND')) {
+      console.error('💡 Solution: Property not found - check GA4_PROPERTY_ID');
     }
     
     console.error('🔍 Full error details:', {
@@ -243,6 +247,16 @@ const safeGA4Call = async (apiCall, fallbackData, endpoint = 'unknown') => {
       status: error.status,
       endpoint: endpoint
     });
+    
+    // Log specific error types for debugging
+    if (error.message.includes('PERMISSION_DENIED')) {
+      console.error('🚨 Permission denied - check service account access to GA4 property');
+    } else if (error.message.includes('RESOURCE_EXHAUSTED')) {
+      console.error('🚨 API quota exceeded - using fallback data');
+    } else if (error.message.includes('NOT_FOUND')) {
+      console.error('🚨 Property not found - check GA4_PROPERTY_ID');
+    }
+    
     return fallbackData;
   }
 };
