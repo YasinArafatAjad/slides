@@ -26,6 +26,7 @@ import BarChart from './charts/BarChart';
 import PieChart from './charts/PieChart';
 import SetupGuide from './SetupGuide';
 import DebugPanel from './DebugPanel';
+import DataStatusChecker from './DataStatusChecker';
 import useAnalytics from '../../hooks/useAnalytics';
 
 const AnalyticsPage = () => {
@@ -149,6 +150,11 @@ const AnalyticsPage = () => {
             <span>Export PDF</span>
           </motion.button>
         </div>
+      </div>
+
+      {/* Data Status Checker */}
+      <div className="px-8 mb-8">
+        <DataStatusChecker />
       </div>
 
       {/* Debug Panel */}
